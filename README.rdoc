@@ -1,6 +1,6 @@
 = moneybook
 
-Description goes here.
+Simple program to keep track of money in a ground, for example during a trip
 
 == Contributing to moneybook
  
