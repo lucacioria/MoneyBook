@@ -49,8 +49,8 @@ end
 command :parse do |c|
   c.syntax = 'moneybook parse [options] [file]'
   c.description = 'calculate total debts for everyone'
-  intermediate = agree("Do you want to see the intermediate results? ")
   c.action do |args, options|
+  intermediate = agree("Do you want to see the intermediate results? ")    
     people = []
     people_abbreviations = []
     sq = [] #big table to make the computations..
