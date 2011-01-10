@@ -153,7 +153,7 @@ command :parse do |c|
         ### PRINT INTERMEDIATE RESULTS ###
         if intermediate then
           puts "==== #{c[:original_str].to_s} ===="
-          puts "true total: #{c[:true_total].to_s}, virtual_total: #{c[:virtual_total].to_s}"
+          puts "total: #{c[:true_total].to_s}"
           mytable = table do |t|
             t.headings = people.sort
             t << c[:true].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
