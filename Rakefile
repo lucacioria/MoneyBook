@@ -21,8 +21,8 @@ Jeweler::Tasks.new do |gem|
   gem.authors = ["luca cioria"]
   # Include your dependencies below. Runtime dependencies are required when using your gem,
   # and development dependencies are only needed for development (ie running rake tasks, tests, etc)
-  gem.add_runtime_dependency 'terminal-table/import'
-  gem.add_runtime_dependency 'commander/import'
+  gem.add_runtime_dependency 'terminal-table'
+  gem.add_runtime_dependency 'commander'
   gem.add_runtime_dependency 'andand'
   #  gem.add_development_dependency 'rspec', '> 1.2.3'
 end
