@@ -26,6 +26,7 @@ Gem::Specification.new do |s|
     "README.rdoc",
     "Rakefile",
     "bin/moneybook",
+    "moneybook.gemspec",
     "test/helper.rb",
     "test/test_moneybook.rb"
   ]
