@@ -46,6 +46,17 @@ PEOPLE: #{people.join(' ')}"
   end
 end
 
+def get_final(sq, people)
+  final = {}
+  people.each{|person| final[person]=0;}
+  sq.each {|c|
+    c[:balance].each_pair{|person, value|
+      final[person] += value
+    }
+  }
+  final
+end
+
 command :parse do |c|
   c.syntax = 'moneybook parse [options] [file]'
   c.description = 'calculate total debts for everyone'
@@ -87,6 +98,7 @@ command :parse do |c|
         # parsing of virtual_str
         if c[:virtual_str] =~ /\A\s*\Z/ then
           c[:virtual].each_key{|person|c[:virtual][person] = c[:true_total]/people.length}
+          c[:virtual_total] = c[:true_total]
         else
           avoid = []
           people_to_complete = []
@@ -148,6 +160,9 @@ command :parse do |c|
             t << c[:virtual].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
             t.add_separator
             t << c[:balance].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
+            t.add_separator
+            final = get_final(sq, people)
+            t << final.sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
           end
           puts mytable
         end
@@ -155,14 +170,7 @@ command :parse do |c|
       end
     }
     ### PRINT FINAL RESULTS ###
-    final = {}
-    people.each{|person| final[person]=0;}
-    sq.each {|c|
-      c[:balance].each_pair{|person, value|
-        final[person] += value
-      }
-    }
-    final.each_pair {|person, value|
+    get_final(sq, people).each_pair {|person, value|
       puts "#{person} \t #{value > 0 ? 'receives' : 'gives   '}   #{"%.1f" % value}"
     }
   end
