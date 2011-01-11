@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["luca cioria"]
   s.date = %q{2011-01-10}
-  s.default_executable = %q{moneybook}
+  s.default_executable = "moneybook"
   s.description = %q{keep track of money in a group}
   s.email = %q{noreply@mail.com}
   s.executables = ["moneybook"]
