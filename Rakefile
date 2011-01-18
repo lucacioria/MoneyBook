@@ -13,7 +13,7 @@ require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
   gem.name = "moneybook"
-  gem.homepage = "http://github.com/vircheck/moneybook"
+  gem.homepage = "http://github.com/vircheck/MoneyBook"
   gem.license = "MIT"
   gem.summary = "keep track of money in a group"
   gem.description = "keep track of money in a group"
