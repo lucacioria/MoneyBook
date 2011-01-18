@@ -51,7 +51,7 @@ Gem::Specification.new do |s|
       s.add_development_dependency(%q<jeweler>, ["~> 1.5.2"])
       s.add_development_dependency(%q<rcov>, [">= 0"])
       s.add_runtime_dependency(%q<terminal-table>, [">= 0"])
-      s.add_runtime_dependency(%q<commander>, [">= 0"])
+      s.add_runtime_dependency(%q<highline>, [">= 0"])
       s.add_runtime_dependency(%q<andand>, [">= 0"])
     else
       s.add_dependency(%q<shoulda>, [">= 0"])
@@ -59,7 +59,7 @@ Gem::Specification.new do |s|
       s.add_dependency(%q<jeweler>, ["~> 1.5.2"])
       s.add_dependency(%q<rcov>, [">= 0"])
       s.add_dependency(%q<terminal-table>, [">= 0"])
-      s.add_dependency(%q<commander>, [">= 0"])
+      s.add_dependency(%q<highline>, [">= 0"])
       s.add_dependency(%q<andand>, [">= 0"])
     end
   else
@@ -68,7 +68,7 @@ Gem::Specification.new do |s|
     s.add_dependency(%q<jeweler>, ["~> 1.5.2"])
     s.add_dependency(%q<rcov>, [">= 0"])
     s.add_dependency(%q<terminal-table>, [">= 0"])
-    s.add_dependency(%q<commander>, [">= 0"])
+    s.add_dependency(%q<highline>, [">= 0"])
     s.add_dependency(%q<andand>, [">= 0"])
   end
 end
