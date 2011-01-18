@@ -1,25 +1,48 @@
 #!/usr/bin/env ruby
 require 'rubygems'
-require 'iconv'
+###
 require 'terminal-table/import'
-require 'commander/import'
-require 'date'
 require 'andand'
+require 'highline/import'
+###
+require 'iconv'
+require 'optparse'
+require 'date'
 require 'abbrev'
 require 'pp'
 
-# :name is optional, otherwise uses the basename of this executable
-program :name, 'MoneyBook'
-program :version, '0.1'
-program :description, 'A simple program to manage group expenses, for example a trip with friends...'
+class Array
+  def normalize_length
+    max = self.inject{|longest, current| longest.to_s.length > current.to_s.length ? longest : current }.to_s.length
+    self.map{|x| x = "%-#{max}s" % x.to_s}
+  end
+end
 
-command :new do |c|
-  c.syntax = 'moneybook new'
-  c.description = 'create a skeleton moneybook file'
-  c.action do |args, options|
-    title = ask("Title: ")
-    people = ask('People (separated by spaces): ', lambda{|x|x.split(/\s+/)})
-    text = "### #{title} ###
+def process_command(cmd)
+  args = Array(cmd)
+  command = args.shift
+  case(command)
+  when "new"
+    command_new(args[0])
+  when "parse"
+    options = {}
+    OptionParser.new do |opts|
+      opts.banner = "Usage: moneybook parse [options] FILENAME"
+      opts.on("-i", "--[no-]intermediate", "Show intermediate computations") do |i|
+        options[:intermediate] = i
+      end
+    end.parse!(args)
+    command_parse(options, args.last)
+  else
+    puts "unknown command: #{command}"
+  end
+end
+
+def command_new(title)
+  title = ask("Title: "){|q| q.readline = true} unless title.to_s != ''
+  people = ask('People (separated by spaces): ', lambda{|x|x.split(/\s+/)}){|q| q.readline = true}
+  change= ask("Currency change? (leave blank if not needed)  ", Float) { |q| q.default = 0; q.readline = true }
+  text = "### #{title} ###
 # #{Date.today.to_s}
 #######
 # - everyone is included:
@@ -32,152 +55,172 @@ command :new do |c|
 # dinner (50Fra 16Tom) +5Tom -2Jack -Mary #Tom spends 5 more than the others, Jack 2 less
 # - synctactic sugar, instead of ...
 # pay back (20L) T
-# - ... you can write
+# - ... you can write ...
 # 20L -> T
+# - ... and since it's a payback it won't count on the spent amount
 #######
 
 PEOPLE: #{people.join(' ')}"
-
-    filename = "moneybook_#{title.downcase.gsub(' ','_')}.txt"
-    if File.open(filename,'w'){|f|f.write text} then
-      puts "File #{filename} created!"
-    else
-      puts "Could not create file #{filename}.."
-    end
+  text += "\nCHANGE: #{change}" if change > 0
+  filename = "moneybook_#{title.downcase.gsub(' ','_')}.txt"
+  if File.open(filename,'w'){|f|f.write text} then
+    puts "File #{filename} created!"
+  else
+    puts "Could not create file #{filename}.."
   end
 end
 
 def get_final(sq, people)
   final = {}
-  people.each{|person| final[person]=0;}
+  spent = {}
+  given = {}
+  people.each{|person| final[person]=0;spent[person]=0;given[person]=0}
   sq.each {|c|
     c[:balance].each_pair{|person, value|
       final[person] += value
     }
+    c[:virtual].each_pair{|person, value|
+      spent[person] += value unless c[:name] == 'PAYBACK'
+    }
+    c[:true].each_pair{|person, value|
+      given[person] += value
+    }
   }
-  final
+  [final, spent, given]
 end
 
-command :parse do |c|
-  c.syntax = 'moneybook parse [options] [file]'
-  c.description = 'calculate total debts for everyone'
-  c.action do |args, options|
-  intermediate = agree("Do you want to see the intermediate results? ")    
-    people = []
-    people_abbreviations = []
-    sq = [] #big table to make the computations..
-    f=File.open(args.first,'r').read
-    if f[0]==255 && f[1]==254 then
-      f=Iconv.iconv('UTF-8', 'UTF-16LE', f)[0][3..-1]
-      puts "converting from UTF-16LE..."
-    end
-    f.each_line{|line|
-      if line =~ /^\s*\#/ || line =~ /\A\s*\Z/
-        # this is interpreted as a comment line
-      elsif (m = line.match(/\A\s*PEOPLE\s*\:?\s*((\s+\w+)+)\s*\Z/).andand[1].andand.split(/\s+/).andand.delete_if{|x|x==""}) != nil then
-        m.each{|z|people<<z.to_s.downcase}
-        people_abbreviations = people.abbrev
-      else
-        original_str = false
-        if temp=line.match(/\A\s*(.+)\s*\-+\>\s*(.+)\Z/) then
-          original_str = line.strip
-          line = "PAYBACK (#{temp[1].to_s}) #{temp[2].to_s}"
-        end
-        x = line.strip.match(/^\s*([\w\ \']+?)\s*\((.+)\)\s*(.+)?/).to_a.map{|z| z.to_s}
-        sq << {:name => x[1].to_s, :original_str => original_str || line.strip, :true_str => x[2].to_s, :virtual_str => x[3].to_s, :true => {}, :virtual => {}, :balance => {},
-        :true_total => 0, :virtual_total => 0}
-        c=sq.last
-        people.each{|person| c[:true][person]=0;c[:virtual][person]=0;c[:balance][person]=0}
-        
-        # parsing of true_str
-        c[:true_str].split(/\s+/).each{|y|
-          temp = y.match(/([\d\.]+)([A-Za-z]+)/)
-          if (person=people_abbreviations[temp[2].to_s.downcase]) != nil
-            c[:true][person] += temp[1].to_f
-            c[:true_total] += temp[1].to_f
-          else
-            puts "error: ambiguos or inexistent name: #{temp[2].to_s}"
-            exit
-          end
-        }
+def command_parse(options, filename)
+  intermediate = options[:intermediate]
+  people = []
+  currency_change = 0
+  people_abbreviations = []
+  sq = [] #big table to make the computations..
+  f=File.open(filename,'r').read
+  if f[0]==255 && f[1]==254 then
+    f=Iconv.iconv('UTF-8', 'UTF-16LE', f)[0][3..-1]
+    puts "converting from UTF-16LE..."
+  end
+  f.each_line{|line|
+    if line =~ /^\s*\#/ || line =~ /\A\s*\Z/
+      # this is interpreted as a comment line
+      puts line if intermediate
+    elsif (m = line.match(/\A\s*PEOPLE\s*\:?\s*((\s+\w+)+)\s*\Z/).andand[1].andand.split(/\s+/).andand.delete_if{|x|x==""}) != nil then
+      m.each{|z|people<<z.to_s.downcase}
+      people_abbreviations = people.abbrev
+    elsif (currency_change == 0) && ((m = line.match(/\A\s*CHANGE\s*\:\s*([\.\d]+)\s*\Z/).andand[1].to_f) != 0) then
+      currency_change = m
+      puts "currency change is #{currency_change}"
+    else
+      original_str = false
+      if temp=line.match(/\A\s*(.+)\s*\-+\>\s*(.+)\Z/) then
+        original_str = line.strip
+        line = "PAYBACK (#{temp[1].to_s}) #{temp[2].to_s}"
+      end
+      x = line.strip.match(/^\s*([\w\ \']+?)\s*\((.+)\)\s*(.+)?/).to_a.map{|z| z.to_s}
+      sq << {:name => x[1].to_s, :original_str => original_str || line.strip, :true_str => x[2].to_s, :virtual_str => x[3].to_s, :true => {}, :virtual => {}, :balance => {},
+      :true_total => 0, :virtual_total => 0}
+      c=sq.last
+      people.each{|person| c[:true][person]=0;c[:virtual][person]=0;c[:balance][person]=0}
 
-        # parsing of virtual_str
-        if c[:virtual_str] =~ /\A\s*\Z/ then
-          c[:virtual].each_key{|person|c[:virtual][person] = c[:true_total]/people.length}
-          c[:virtual_total] = c[:true_total]
+      # parsing of true_str
+      c[:true_str].split(/\s+/).each{|y|
+        temp = y.match(/([\d\.]+)([A-Za-z]+)/)
+        if (person=people_abbreviations[temp[2].to_s.downcase]) != nil
+          c[:true][person] += temp[1].to_f
+          c[:true_total] += temp[1].to_f
         else
-          avoid = []
-          people_to_complete = []
-          complete_automatically = true
-          c[:virtual_str].split(/\s+/).each{|y|
-            if (temp = y.match(/([\+\-\d\.]*)([A-Za-z]+)/)) then         
-              if (person=people_abbreviations[temp[2].to_s.downcase]) != nil
-                if temp[1].to_s == "" then
-                  complete_automatically = false
-                  people_to_complete << person
+          puts "error: ambiguos or inexistent name: #{temp[2].to_s}"
+          exit
+        end
+      }
+
+      # parsing of virtual_str
+      if c[:virtual_str] =~ /\A\s*\Z/ then
+        c[:virtual].each_key{|person|c[:virtual][person] = c[:true_total]/people.length}
+        c[:virtual_total] = c[:true_total]
+      else
+        avoid = []
+        people_to_complete = []
+        complete_automatically = true
+        c[:virtual_str].split(/\s+/).each{|y|
+          if (temp = y.match(/([\+\-\d\.]*)([A-Za-z]+)/)) then         
+            if (person=people_abbreviations[temp[2].to_s.downcase]) != nil
+              if temp[1].to_s == "" then
+                complete_automatically = false
+                people_to_complete << person
+                avoid << person
+              elsif temp[1].to_s[0,1] == '+'
+                c[:virtual][person] += temp[1].to_s[1..-1].to_f
+                c[:virtual_total] += temp[1].to_f
+              elsif temp[1].to_s[0,1] == '-'
+                if temp[1].to_s == '-' then
+                  c[:virtual][person] = 0
                   avoid << person
-                elsif temp[1].to_s[0,1] == '+'
-                  c[:virtual][person] += temp[1].to_s[1..-1].to_f
-                  c[:virtual_total] -= temp[1].to_f
-                elsif temp[1].to_s[0,1] == '-'
-                  if temp[1].to_s == '-' then
-                    c[:virtual][person] = 0
-                    avoid << person
-                  else
-                    c[:virtual][person] -= temp[1].to_s[1..-1].to_f
-                    c[:virtual_total] += temp[1].to_f
-                  end
                 else
-                  c[:virtual][person] += temp[1].to_f
-                  c[:virtual_total] += temp[1].to_f
-                  avoid << person
+                  c[:virtual][person] -= temp[1].to_s[1..-1].to_f
+                  c[:virtual_total] -= temp[1].to_f
                 end
               else
-                puts "error: ambiguos or inexistent name: #{temp[2].to_s}"
-                exit
+                c[:virtual][person] += temp[1].to_f
+                c[:virtual_total] += temp[1].to_f
+                avoid << person
               end
+            else
+              puts "error: ambiguos or inexistent name: #{temp[2].to_s}"
+              exit
             end
-          }
-          if c[:virtual_total] > c[:true_total]
-            puts "error: Virtual total doesn't match.."
-            exit
           end
-          if complete_automatically then      
-            others = c[:virtual].map{|i,v|i}-avoid
-            others.each { |p|
-              c[:virtual][p] += (c[:true_total] - c[:virtual_total])/others.length
-            }
-          else
-            people_to_complete.each { |p|
-              c[:virtual][p] += (c[:true_total] - c[:virtual_total])/people_to_complete.length
-            }
-          end
-        end
-        c[:balance].each_key{|person|
-          c[:balance][person] = c[:true][person] - c[:virtual][person]
         }
-        ### PRINT INTERMEDIATE RESULTS ###
-        if intermediate then
-          puts "==== #{c[:original_str].to_s} ===="
-          puts "total: #{c[:true_total].to_s}"
-          mytable = table do |t|
-            t.headings = people.sort
-            t << c[:true].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
-            t << c[:virtual].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
-            t.add_separator
-            t << c[:balance].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
-            t.add_separator
-            final = get_final(sq, people)
-            t << final.sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
-          end
-          puts mytable
+        if c[:virtual_total] > c[:true_total]
+          puts "error: Virtual total doesn't match.."
+          exit
         end
-        ###
+        if complete_automatically then      
+          others = c[:virtual].map{|i,v|i}-avoid
+          others.each { |p|
+            c[:virtual][p] += (c[:true_total] - c[:virtual_total])/others.length
+          }
+        else
+          people_to_complete.each { |p|
+            c[:virtual][p] += (c[:true_total] - c[:virtual_total])/people_to_complete.length
+          }
+        end
       end
-    }
-    ### PRINT FINAL RESULTS ###
-    get_final(sq, people).each_pair {|person, value|
-      puts "#{person} \t #{value > 0 ? 'receives' : 'gives   '}   #{"%.1f" % value}"
-    }
-  end
+      c[:balance].each_key{|person|
+        c[:balance][person] = c[:true][person] - c[:virtual][person]
+      }
+      ### PRINT INTERMEDIATE RESULTS ###
+      if intermediate then
+        puts "==== #{c[:original_str].to_s} ===="
+        puts "total: #{c[:true_total].to_s}"
+        mytable = table do |t|
+          t.headings = people.sort
+          t << c[:true].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
+          t << c[:virtual].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
+          t.add_separator
+          t << c[:balance].sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
+          t.add_separator
+          final = get_final(sq, people)[0]
+          t << final.sort.map{|z|z[1] == 0 ? "" : "%.1f" % z[1]}
+        end
+        puts mytable
+      end
+      ###
+    end
+  }
+  ### PRINT FINAL RESULTS ###
+  final = get_final(sq, people)
+  puts "in local currency:" if currency_change > 0
+  people_to_print = people.normalize_length
+  people.each_index{|i|
+    person = people[i]
+    puts "#{people_to_print[i]} \t #{final[0][person] > 0 ? 'receives' : 'gives   '}   #{"% 8.2f" % final[0][person]} spent #{"% 8.2f" % final[1][person]} given #{"% 8.2f" % final[2][person]}"
+  }
+  puts "in converted currency:" if currency_change > 0
+  people.each_index{|i|
+    person = people[i]
+    puts "#{people_to_print[i]} \t #{final[0][person] > 0 ? 'receives' : 'gives   '}   #{"% 8.2f" % (final[0][person]*currency_change)} spent #{"% 8.2f" % (final[1][person]*currency_change)} given #{"% 8.2f" % (final[2][person]*currency_change)}" if currency_change > 0
+  }
 end
+
+process_command(ARGV)

@@ -5,12 +5,12 @@
 
 Gem::Specification.new do |s|
   s.name = %q{moneybook}
-  s.version = "0.1.0"
+  s.version = "0.1.7"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["luca cioria"]
-  s.date = %q{2011-01-10}
-  s.default_executable = "moneybook"
+  s.date = %q{2011-01-18}
+  s.default_executable = %q{moneybook}
   s.description = %q{keep track of money in a group}
   s.email = %q{noreply@mail.com}
   s.executables = ["moneybook"]
@@ -27,6 +27,7 @@ Gem::Specification.new do |s|
     "Rakefile",
     "VERSION",
     "bin/moneybook",
+    "lib/moneybook.rb",
     "moneybook.gemspec",
     "test/helper.rb",
     "test/test_moneybook.rb"
