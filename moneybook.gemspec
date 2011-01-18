@@ -5,7 +5,7 @@
 
 Gem::Specification.new do |s|
   s.name = %q{moneybook}
-  s.version = "0.1.7"
+  s.version = "0.2.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["luca cioria"]
@@ -16,14 +16,14 @@ Gem::Specification.new do |s|
   s.executables = ["moneybook"]
   s.extra_rdoc_files = [
     "LICENSE.txt",
-    "README.rdoc"
+    "README.md"
   ]
   s.files = [
     ".document",
     "Gemfile",
     "Gemfile.lock",
     "LICENSE.txt",
-    "README.rdoc",
+    "README.md",
     "Rakefile",
     "VERSION",
     "bin/moneybook",
@@ -32,7 +32,7 @@ Gem::Specification.new do |s|
     "test/helper.rb",
     "test/test_moneybook.rb"
   ]
-  s.homepage = %q{http://github.com/vircheck/moneybook}
+  s.homepage = %q{http://github.com/vircheck/MoneyBook}
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
   s.rubygems_version = %q{1.4.2}
