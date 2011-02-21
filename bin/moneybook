@@ -148,7 +148,6 @@ def command_parse(options, filename)
         temp2 = temp[1].to_s.match(/([\d\.]+)\s*([A-Za-z]+)/)
         original_str = line.strip
         line = "DEBT (#{temp2[1]}#{temp[2].to_s}) #{temp2[2].to_s}"
-        puts line
       end      
       x = line.strip.match(REGEXP_COMP_LINE).to_a.map{|z| z.to_s}
       sq << {:name => x[1].to_s, :original_str => original_str || line.strip, :true_str => x[2].to_s, :virtual_str => x[3].to_s, :true => {}, :virtual => {}, :balance => {},
