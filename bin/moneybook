@@ -247,12 +247,12 @@ def command_parse(options, filename)
   people_to_print = people.normalize_length
   people.each_index{|i|
     person = people[i]
-    puts "#{people_to_print[i]}  #{final[0][person] > 0 ? 'receives' : 'gives   '}   #{"% 8.2f" % final[0][person]} spent #{"% 8.2f" % final[1][person]} given #{"% 8.2f" % final[2][person]}"
+    puts "#{people_to_print[i]}  #{final[0][person] == 0 ? '---     ' : (final[0][person] > 0 ? 'receives' : 'gives   ')}   #{"% 8.2f" % final[0][person]} spent #{"% 8.2f" % final[1][person]} given #{"% 8.2f" % final[2][person]}"
   }
   puts "=== in converted currency (multiplying by #{currency_change}):" if currency_change > 0
   people.each_index{|i|
     person = people[i]
-    puts "#{people_to_print[i]}  #{final[0][person] > 0 ? 'receives' : 'gives   '}   #{"% 8.2f" % (final[0][person]*currency_change)} spent #{"% 8.2f" % (final[1][person]*currency_change)} given #{"% 8.2f" % (final[2][person]*currency_change)}" if currency_change > 0
+    puts "#{people_to_print[i]}  #{final[0][person] == 0 ? '---     ' : (final[0][person] > 0 ? 'receives' : 'gives   ')}   #{"% 8.2f" % (final[0][person]*currency_change)} spent #{"% 8.2f" % (final[1][person]*currency_change)} given #{"% 8.2f" % (final[2][person]*currency_change)}" if currency_change > 0
   }
 end
 
