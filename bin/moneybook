@@ -13,6 +13,7 @@ require 'pp'
 
 REGEXP_COMP_LINE = /^\s*([\w\ \']+?)\s*\((.+)\)\s*(.+)?/
 REGEXP_PAYBACK_LINE = /\A\s*(.+)\s*\-+\>\s*(.+)\Z/
+REGEXP_DEBT_LINE = /\A\s*(.+)\s*\@\s*(.+)\Z/
 
 class Array
   def normalize_length
@@ -45,7 +46,7 @@ def process_command(cmd)
     end.parse!(args)
     command_parse(options, args.last)
   else
-    puts "unknown command: #{command}"
+    puts "unknown command: #{command}.. available commmands: new, parse\ndo moneybook parse --help for more help"
   end
 end
 
@@ -69,6 +70,13 @@ def command_new(title)
 # - ... you can write ...
 # 20L -> T
 # - ... and since it's a payback it won't count on the spent amount
+# - another synctactic sugar, instead of ...
+# undefined past debt (20T) L
+# - ... you can write ...
+# 20L @ T
+# which means the opposite of 20L -> T
+# it means that L owes T 20$
+# and it doesn't count on the spent amount
 #######
 
 PEOPLE: #{people.join(' ')}"
@@ -91,7 +99,7 @@ def get_final(sq, people)
       final[person] += value
     }
     c[:virtual].each_pair{|person, value|
-      spent[person] += value unless c[:name] == 'PAYBACK'
+      spent[person] += value unless (c[:name] == 'PAYBACK' || c[:name] == 'DEBT')
     }
     c[:true].each_pair{|person, value|
       given[person] += value
@@ -136,6 +144,12 @@ def command_parse(options, filename)
         original_str = line.strip
         line = "PAYBACK (#{temp[1].to_s}) #{temp[2].to_s}"
       end
+      if temp=line.match(REGEXP_DEBT_LINE) then
+        temp2 = temp[1].to_s.match(/([\d\.]+)\s*([A-Za-z]+)/)
+        original_str = line.strip
+        line = "DEBT (#{temp2[1]}#{temp[2].to_s}) #{temp2[2].to_s}"
+        puts line
+      end      
       x = line.strip.match(REGEXP_COMP_LINE).to_a.map{|z| z.to_s}
       sq << {:name => x[1].to_s, :original_str => original_str || line.strip, :true_str => x[2].to_s, :virtual_str => x[3].to_s, :true => {}, :virtual => {}, :balance => {},
       :true_total => 0, :virtual_total => 0}
@@ -143,8 +157,8 @@ def command_parse(options, filename)
       people.each{|person| c[:true][person]=0;c[:virtual][person]=0;c[:balance][person]=0}
 
       # parsing of true_str
-      c[:true_str].split(/\s+/).each{|y|
-        temp = y.match(/([\d\.]+)([A-Za-z]+)/)
+      c[:true_str].split(/\s+(?=\d)/).each{|y|
+        temp = y.match(/([\d\.]+)\s*([A-Za-z]+)/)
         if (person=people_abbreviations[temp[2].to_s.downcase]) != nil
           c[:true][person] += temp[1].to_f
           c[:true_total] += temp[1].to_f
