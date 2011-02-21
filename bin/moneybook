@@ -93,7 +93,8 @@ def get_final(sq, people)
   final = {}
   spent = {}
   given = {}
-  people.each{|person| final[person]=0;spent[person]=0;given[person]=0}
+  debt  = {}
+  people.each{|person| final[person]=0;spent[person]=0;given[person]=0;debt[person]=0;}
   sq.each {|c|
     c[:balance].each_pair{|person, value|
       final[person] += value
@@ -101,11 +102,14 @@ def get_final(sq, people)
     c[:virtual].each_pair{|person, value|
       spent[person] += value unless (c[:name] == 'PAYBACK' || c[:name] == 'DEBT')
     }
+    c[:virtual].each_pair{|person, value|
+      debt[person] += value if (c[:name] == 'PAYBACK' || c[:name] == 'DEBT')
+    }    
     c[:true].each_pair{|person, value|
       given[person] += value
     }
   }
-  [final, spent, given]
+  [final, spent, given, debt]
 end
 
 def command_parse(options, filename)
@@ -247,12 +251,12 @@ def command_parse(options, filename)
   people_to_print = people.normalize_length
   people.each_index{|i|
     person = people[i]
-    puts "#{people_to_print[i]}  #{final[0][person] == 0 ? '---     ' : (final[0][person] > 0 ? 'receives' : 'gives   ')}   #{"% 8.2f" % final[0][person]} spent #{"% 8.2f" % final[1][person]} given #{"% 8.2f" % final[2][person]}"
+    puts "#{people_to_print[i]}  #{final[0][person] == 0 ? '---     ' : (final[0][person] > 0 ? 'receives' : 'gives   ')}   #{"% 8.2f" % final[0][person]} spent #{"% 8.2f" % final[1][person]} given #{"% 8.2f" % final[2][person]} debt #{"% 8.2f" % final[3][person]}"
   }
   puts "=== in converted currency (multiplying by #{currency_change}):" if currency_change > 0
   people.each_index{|i|
     person = people[i]
-    puts "#{people_to_print[i]}  #{final[0][person] == 0 ? '---     ' : (final[0][person] > 0 ? 'receives' : 'gives   ')}   #{"% 8.2f" % (final[0][person]*currency_change)} spent #{"% 8.2f" % (final[1][person]*currency_change)} given #{"% 8.2f" % (final[2][person]*currency_change)}" if currency_change > 0
+    puts "#{people_to_print[i]}  #{final[0][person] == 0 ? '---     ' : (final[0][person] > 0 ? 'receives' : 'gives   ')}   #{"% 8.2f" % (final[0][person]*currency_change)} spent #{"% 8.2f" % (final[1][person]*currency_change)} given #{"% 8.2f" % (final[2][person]*currency_change)} debt #{"% 8.2f" % final[3][person]*currency_change}" if currency_change > 0
   }
 end
 
