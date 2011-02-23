@@ -144,6 +144,18 @@ def command_parse(options, filename)
       current_comp_line += 1
       reached_tail = true if options[:tail] && current_comp_line > number_of_computational_lines - options[:tail_number]
       original_str = false
+      # eval math expressions in the form $3 + 4*12$
+      line.gsub!(/\$([^\$]*)\$/){
+        if intermediate && reached_tail then
+          puts "#{line.strip} ==> calc: #{$1} = #{eval $1}"
+        end
+        eval $1
+      }
+      # clear any end of line comment and print them if needed
+      temp=line.split('#')
+      line=temp[0].strip
+      puts "# "+temp[1..-1].join('#').strip if temp.length > 1 && intermediate && reached_tail
+      ###
       if temp=line.match(REGEXP_PAYBACK_LINE) then
         original_str = line.strip
         line = "PAYBACK (#{temp[1].to_s}) #{temp[2].to_s}"
