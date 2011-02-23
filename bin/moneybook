@@ -77,11 +77,17 @@ def command_new(title)
 # which means the opposite of 20L -> T
 # it means that L owes T 20$
 # and it doesn't count on the spent amount
+#
+# lines beginning with # are comments, you can also add comments at the end of a line:
+# pizza (45 Luca) 10 Tommaso # Tommaso didn't get the drink..
+#
+# expressions between dollar signs will be evaluated, like so:
+# pizza (45 Luca) $ 5+3.5+2*0.7$ Tommaso
 #######
 
 PEOPLE: #{people.join(' ')}"
   text += "\nCHANGE: #{change}" if change > 0
-  filename = "moneybook_#{title.downcase.gsub(' ','_')}.txt"
+  filename = "money_#{title.downcase.gsub(' ','_')}.txt"
   if File.open(filename,'w'){|f|f.write text} then
     puts "File #{filename} created!"
   else
