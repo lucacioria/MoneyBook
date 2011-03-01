@@ -118,6 +118,59 @@ def get_final(sq, people)
   [final, spent, given, debt]
 end
 
+def get_exchanges(final,people)
+  poor_p = [] # people who must give..
+  poor_v = []
+  rich_p = [] # people who shall receive..
+  rich_v = []
+  final[0].each_pair{|person, value|
+    if value > 0 then
+       rich_p << person
+       rich_v << value.round
+    elsif value < 0 then
+       poor_p << person
+       poor_v << -value.round
+    else
+      # this person doesn't have to give or receive anything..
+    end
+  }
+  puts "\nPOSSIBLE (APPROX) EXCHANGES.."
+  while (eq=rich_v-(rich_v-poor_v)) != [] do
+    receives = rich_v.index eq[0]
+    gives    = poor_v.index eq[0]
+    amount   = eq[0]
+    puts "#{poor_p[gives]} gives #{amount} to #{rich_p[receives]}"
+    rich_p.delete_at receives
+    rich_v.delete_at receives    
+    poor_p.delete_at gives
+    poor_v.delete_at gives    
+  end
+  timeout = 20
+  while poor_v.length > 0 && rich_v.length > 0 && timeout > 0 do
+    #pp "---"
+    #pp [poor_v, rich_v]
+    #pp [poor_p, rich_p]
+    gives    = poor_v.index poor_v.max
+    receives = rich_v.index rich_v.min
+    amount   = poor_v.max >= rich_v.min ? rich_v.min : poor_v.max
+    puts "#{poor_p[gives]} gives #{amount} to #{rich_p[receives]}"
+    rich_v[receives] -= amount
+    poor_v[gives]    -= amount
+    #pp [poor_v, rich_v]
+    #pp [poor_p, rich_p]    
+    if poor_v[gives] == 0
+      poor_p.delete_at gives
+      poor_v.delete_at gives
+    end
+    if rich_v[receives] == 0
+      rich_p.delete_at receives
+      rich_v.delete_at receives
+    end
+    timeout -= 1
+  end
+  puts "--------------"
+end
+
 def command_parse(options, filename)
   intermediate = options[:intermediate]
   people = []
@@ -276,6 +329,8 @@ def command_parse(options, filename)
     person = people[i]
     puts "#{people_to_print[i]}  #{final[0][person] == 0 ? '---     ' : (final[0][person] > 0 ? 'receives' : 'gives   ')}   #{"% 8.2f" % (final[0][person]*currency_change)} spent #{"% 8.2f" % (final[1][person]*currency_change)} given #{"% 8.2f" % (final[2][person]*currency_change)} debt #{"% 8.2f" % final[3][person]*currency_change}" if currency_change > 0
   }
+  ### PRINT MONEY EXCHANGES ###
+  exchanges = get_exchanges(final,people)
 end
 
 process_command(ARGV)
